@@ -40,9 +40,9 @@
      New features are also implemented. It's not an extension!
      The name only comes from the fact that the original purpose of the library was to add support for message components and we haven't found a better one yet.
 
-     **❗Also important to know❗:** `Why is this library so inactive at the moment? <https://github.com/mccoderpy/discord.py-message-components/discussions/17#>`_
-
 **❗The most (new) features are only documented in Code currently❗**
+
+**Take a look at how the new docs will look like** `here <https://discordpy-message-components.readthedocs.io/en/docs>`_. **Feel free to** `contribute <../../tree/docs>`_ **to them**
 
 .. figure:: https://github.com/mccoderpy/discord.py-message-components/raw/main/images/rtd-logo-wordmark-light.png
    :name: discord.py-message-components documentation
@@ -51,12 +51,12 @@
    :scale: 20%
    :target: https://discordpy-message-components.readthedocs.io/en/developer/
 
-   **Read the Documentation** `here <https://discordpy-message-components.readthedocs.io/en/developer/>`_
+**Read the (current) Documentation** `here <https://discordpy-message-components.readthedocs.io/en/developer/>`_
 
 You need help? Or have ideas/feedback?
 ______________________________________
 
-Open a Issue/Pull request on `GitHub <https://github.com/mccoderpy/discord.py-message-components/pulls>`_, join the `support-server <https://discord.gg/sb69muSqsg>`_ or send me a direct-message on `Discord <https://discord.com/channels/@me>`_: ``mccuber04#2960``
+Open a `issue <../../issues>`_/`pull request <../../pulls>`_, join the `support-server <https://discord.gg/sb69muSqsg>`_ or send me a direct-message on `Discord <https://discord.com/channels/@me>`_: ``mccuber04#2960``
 
 Installing
 __________
