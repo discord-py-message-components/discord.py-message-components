@@ -23,13 +23,15 @@ from typing import (Union,
                     Any,
                     TYPE_CHECKING)
 from .components import Button, SelectMenu, ActionRow, Modal, TextInput
-from .channel import DMChannel, ThreadChannel, _channel_factory, TextChannel
+from .channel import  _channel_factory, TextChannel, VoiceChannel, DMChannel, ThreadChannel
 from .errors import NotFound, InvalidArgument, AlreadyResponded, UnknownInteraction
 from .enums import InteractionType, ApplicationCommandType, ComponentType, InteractionCallbackType, Locale, MessageType, \
     try_enum
 
 if TYPE_CHECKING:
+    import datetime
     from .application_commands import SlashCommand, MessageCommand, UserCommand
+
 
 log = logging.getLogger(__name__)
 
@@ -290,7 +292,7 @@ class BaseInteraction:
         self.callback_message: Optional[Message] = None
         self._command = None
         self._component = None
-        self.messages: Optional[List[Union[Message, EphemeralMessage]]] = {}
+        self.messages: Optional[Dict[int, Union[Message, EphemeralMessage]]] = {}
 
     def __repr__(self):
         """Represents a :class:`~discord.BaseInteraction` object."""
@@ -358,7 +360,11 @@ class BaseInteraction:
                    ) -> Union[Message, EphemeralMessage, None]:
         """|coro|
 
-        'Defers' if it isn't yet and edit the message
+        'Defers' if it isn't yet and edit the message.
+        Depending on the :class:`~discord.InteractionType` of the interaction this edits the original message or the loading message.
+
+
+
         """
         if self.message_is_hidden or self.deferred_modal:
             return await self.message.edit(**fields)
@@ -508,8 +514,44 @@ class BaseInteraction:
                       ) -> Union[Message, EphemeralMessage]:
         """|coro|
 
-        Responds to an interaction by sending a message that can be made visible only to the person who performed the
-        interaction by setting the `hidden` parameter to :bool:`True`.
+        Responds to an interaction by sending a message.
+
+        Parameters
+        ------------
+        content: :class:`str`
+            The content of the message to send.
+        tts: :class:`bool`
+            Indicates if the message should be sent using text-to-speech.
+        embed: :class:`~discord.Embed`
+            The rich embed for the content.
+        embeds: List[:class:`~discord.Embed`]
+            A list containing up to ten embeds
+        components: List[Union[:class:`~discord.ActionRow`, List[Union[:class:`~discord.Button`, :class:`~discord.SelectMenu`]]]]
+            A list of up to five :class:`~discord.ActionRow`'s/:class:`list`'s each containing up to five :class:`~discord.Button`'s or one :class:`~discord.SelectMenu`'
+        file: :class:`~discord.File`
+            The file to upload.
+        files: List[:class:`~discord.File`]
+            A :class:`list` of files to upload. Must be a maximum of 10.
+        stickers: List[:class:`~discord.GuildSticker`]
+            A list of up to 3 :class:`discord.GuildSticker` that should be sent with the message.
+        delete_after: :class:`float`
+            If provided, the number of seconds to wait in the background
+            before deleting the message we just sent. If the deletion fails,
+            then it is silently ignored.
+
+            .. note::
+                If :attr:`.hidden` is ``True`` the message can't be deleted.
+
+        allowed_mentions: :class:`~discord.AllowedMentions`
+            Controls the mentions being processed in this message. If this is
+            passed, then the object is merged with :attr:`~discord.Client.allowed_mentions`.
+            The merging behaviour only overrides attributes that have been explicitly passed
+            to the object, otherwise it uses the attributes set in :attr:`~discord.Client.allowed_mentions`.
+            If no object is passed at all then the defaults given by :attr:`~discord.Client.allowed_mentions`
+            are used instead.
+
+        hidden: Optional[:class:`bool`]
+            If ``True`` the message will be only visible for the performer of the interaction (e.g. :attr:`.author`.
         """
         state = self._state
         if not self.channel:
@@ -597,6 +639,7 @@ class BaseInteraction:
             else:
                 method = state.http.send_interaction_response(
                     token=self._token,
+                    interaction_id=self.id,
                     application_id=self._application_id,
                     data=data,
                     files=files,
@@ -647,11 +690,18 @@ class BaseInteraction:
         self.deferred_modal = True
         return data
 
-    async def get_original_callback(self, raw: bool = False):
+    async def get_original_callback(self, raw: bool = False) -> Optional[Union[Message, EphemeralMessage, dict]]:
         """|coro|
-        Fetch the original callback-message of the interaction
+        Fetch the original callback-message of the interaction.
+
         .. warning::
+
             This is an API-Call and should be used carefully
+
+        Parameters
+        ----------
+        raw: Optional[:class:`bool`]
+            Whether to return the raw data from the api instead of a :class:`~discord.Message`/:class:`EphemeralMessage`.
         """
         data = await self._state.http.get_original_interaction_response(self._token, self._application_id)
         if raw:
@@ -664,24 +714,45 @@ class BaseInteraction:
         return msg
 
     def get_followup(self, id: int) -> Optional[Union[Message, EphemeralMessage]]:
-        return self.messages[id]
+        """
+        Gets a followup message of this interaction with the given :attr:`~discord.BaseInteraction.id`.
+
+        Parameters
+        -----------
+        id: :class:`int`
+            The id of the followup message.
+
+        Returns
+        -------
+        The :class:`~discord.Message`/:class:`~discord.EphemeralMessage` or ``None`` if there is none.
+        """
+        return self.messages.get(id, None)
 
     @property
-    def created_at(self):
+    def created_at(self) -> 'datetime.datetime':
         """
         Returns the Interaction’s creation time in UTC.
 
-        :return: datetime.datetime
+        :return: :class:`datetime.datetime`
         """
         return utils.snowflake_time(self.id)
 
     @property
     def author(self) -> Union[Member, User]:
+        """
+        The :class:`~discord.Member` that invoked the interaction. If :attr:`~BaseInteraction.channel` is of type :class:`discords.ChannelType.private` or the user has left the guild, then it is a :class:`~discord.User` instead.
+
+        :return: Union[:class:`~discord.Member`, :class:`~discord.User`]
+        """
         return self.member if self.member is not None else self.user
 
     @property
-    def channel(self) -> Union[DMChannel, 'TextChannel', ThreadChannel]:
-        """The channel where the interaction was invoked in."""
+    def channel(self) -> Union[DMChannel, TextChannel, ThreadChannel, VoiceChannel]:
+        """
+        The channel where the interaction was invoked in.
+
+        :returns: Union[:class:`~discord.TextChannel`, :class:`~discord.ThreadChannel`, :class:`~discord.DMChannel`, :class`~discord.VoiceChannel`]
+        """
         return getattr(self, '_channel', self.guild.get_channel(self.channel_id)
         if self.guild_id else self._state.get_channel(self.channel_id))
 
@@ -690,29 +761,23 @@ class BaseInteraction:
         self._channel = channel
 
     @property
-    def command(self) -> Optional[Union['SlashCommand', 'MessageCommand', 'UserCommand']]:
-        """"Optional[:class:``ApplicationCommand`] The application-command that was invoked if any"""
-        if getattr(self, '_command', None) is not None:
-            return self._command
-        return self._state._get_client()._get_application_command(self.data.id) \
-            if (self.type.ApplicationCommand or self.type.ApplicationCommandAutocomplete) else None
-
-    @property
     def guild(self) -> Optional[Guild]:
-        """The guild of the interaction"""
+        """Optional[:class:`~discord.Guild`]: The guild the interaction was invoked in, if there is one."""
         return self._state._get_guild(self.guild_id)
 
     @property
     def message_is_dm(self) -> bool:
+        """:class:`bool`: Whether the interaction was invoked in a :class:`~discord.DMChannel`."""
         return not self.guild_id
 
     @property
     def message_is_hidden(self) -> bool:
-        return self.message.flags.ephemeral
+        """:class:`bool`: Whether the :attr:`message` has the :func:`~discord.MessageFlags.ephemeral` flag."""
+        return self.message and self.message.flags.ephemeral
 
     @property
     def bot(self):
-        """Returns the discord.Client/commands.Bot instance"""
+        """Union[:class:`~discord.Client`/:class:`~discord.ext.commands.Bot`]: The :class:`~discord.Client`/:class:`~discord.ext.commands.Bot` instance of the bot."""
         return self._state._get_client()
 
     @classmethod
@@ -737,6 +802,14 @@ class ApplicationCommandInteraction(BaseInteraction):
             self.target = self.data.resolved.messages[self.data.target_id]
         else:
             self.target = None
+
+    @property
+    def command(self) -> Optional[Union['SlashCommand', 'MessageCommand', 'UserCommand']]:
+        """Optional[:class:`~discord.ApplicationCommand`]: The application-command that was invoked if any."""
+        if getattr(self, '_command', None) is not None:
+            return self._command
+        return self._state._get_client()._get_application_command(self.data.id) \
+            if (self.type.ApplicationCommand or self.type.ApplicationCommandAutocomplete) else None
 
     async def defer(self, hidden: bool = False) -> Union[Message, EphemeralMessage]:
         """
@@ -851,7 +924,7 @@ class AutocompleteInteraction(BaseInteraction):
 
 class ModalSubmitInteraction(BaseInteraction):
     def get_field(self, custom_id) -> Union['TextInput', None]:
-        """Optional[:class:`~discord.TextInput`]: Returns the field witch :attr:`custom_id` match or :type:`None`"""
+        """Optional[:class:`~discord.TextInput`]: Returns the field witch :attr:`~discord.TextInput.custom_id` match or :class:`None`"""
         for ar in self.data.components:
             for c in ar:
                 if c.custom_id == custom_id:
@@ -860,7 +933,7 @@ class ModalSubmitInteraction(BaseInteraction):
 
     @property
     def fields(self) -> List['TextInput']:
-        """List[:class:`~discord.TextInput`] Returns a :class:`list` containing the fields of the modal."""
+        """List[:class:`~discord.TextInput`] Returns a :class:`list` containing the fields of the :class:`~discord.Modal`."""
         field_list = []
         for ar in self.data.components:
             for c in ar:
@@ -870,12 +943,12 @@ class ModalSubmitInteraction(BaseInteraction):
     @property
     def custom_id(self) -> str:
         """
-        The Custom ID of the modal
+        The Custom ID of the :class:`~discord.Modal`
 
         Returns
         -------
         :class:`str`
-            The :attr:`custom_id` of the :class:`~discord.Modal`.
+            The :attr:`~discord.Modal.custom_id` of the :class:`~discord.Modal`.
         """
         return self.data.custom_id
 
