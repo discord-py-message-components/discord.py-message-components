@@ -46,6 +46,7 @@ __all__ = (
     'TimestampStyle',
     'Locale',
     'InviteTargetType',
+    'AutoArchiveDuration',
     'MessageType',
     'VoiceRegion',
     'SpeakingState',
@@ -60,7 +61,6 @@ __all__ = (
     'HypeSquadHouse',
     'NotificationLevel',
     'PremiumType',
-    'UserContentFilter',
     'FriendFlags',
     'TeamMembershipState',
     'TextInputStyle',
@@ -671,12 +671,6 @@ class ContentFilter(Enum):
         return self.name
 
 
-class UserContentFilter(Enum):
-    disabled    = 0
-    friends     = 1
-    all_messages = 2
-
-
 class FriendFlags(Enum):
     noone = 0
     mutual_guilds = 1
@@ -688,7 +682,6 @@ class FriendFlags(Enum):
 class Theme(Enum):
     light = 'light'
     dark = 'dark'
-
 
 class Status(Enum):
     online = 'online'
