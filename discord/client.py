@@ -47,7 +47,7 @@ from .invite import Invite
 from .template import Template
 from .widget import Widget
 from .guild import Guild
-from .channel import _channel_factory
+from .channel import _channel_factory, PartialMessageable
 from .enums import ChannelType, ApplicationCommandType
 from .mentions import AllowedMentions
 from .errors import *
@@ -701,10 +701,14 @@ class Client:
                 # regardless and rely on is_closed instead
                 if isinstance(exc, ConnectionClosed):
                     if exc.code == 4014:
-                        raise PrivilegedIntentsRequired(exc.shard_id) from None
+                        if self.shard_count and self.shard_count > 0:
+                            raise PrivilegedIntentsRequired(exc.shard_id)
+                        else:
+                            sys.stderr.write(str(PrivilegedIntentsRequired(exc.shard_id)))
                     if exc.code != 1000:
                         await self.close()
-                        raise
+                        if not exc.code == 4014:
+                            raise
 
                 retry = backoff.delay()
                 log.exception("Attempting a reconnect in %.2fs", retry)
@@ -894,6 +898,33 @@ class Client:
             The returned channel or ``None`` if not found.
         """
         return self._connection.get_channel(id)
+
+    def get_partial_messageable(self,
+                                id: int,
+                                *,
+                                guild_id: Optional[int] = None,
+                                type: Optional[ChannelType] = None) -> PartialMessageable:
+        """Returns a :class:`~discord.PartialMessageable` with the given channel ID.
+        This is useful if you have the ID of a channel but don't want to do an API call
+        to send messages to it.
+
+        Parameters
+        -----------
+        id: :class:`int`
+            The channel ID to create a :class:`~discord.PartialMessageable` for.
+        guild_id: Optional[:class:`int`]
+            The optional guild ID to create a :class:`~discord.PartialMessageable` for.
+            This is not required to actually send messages, but it does allow the
+            :meth:`~discord.PartialMessageable.jump_url` and
+            :attr:`~discord.PartialMessageable.guild` properties to function properly.
+        type: Optional[:class:`.ChannelType`]
+            The underlying channel type for the :class:`~discord.PartialMessageable`.
+        Returns
+        --------
+        :class:`.PartialMessageable`
+            The partial messageable created
+        """
+        return PartialMessageable(state=self._connection, id=id, guild_id=guild_id, type=type)
 
     def get_guild(self, id):
         """Returns a guild with the given ID.

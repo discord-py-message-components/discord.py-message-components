@@ -388,6 +388,11 @@ class PublicUserFlags(BaseFlags):
         """:class:`bool`: Returns ``True`` if a bot-user uses only HTTP interactions and is shown in the online member list"""
         return UserFlags.bot_http_interactions.value
 
+    @flag_value
+    def spammer(self):
+        """:class:`bool`: Returns ``True`` if the user is flagged as a spammer by discord."""
+        return UserFlags.spammer
+
     def all(self):
         """List[:class:`UserFlags`]: Returns all public flags the user has."""
         return [public_flag for public_flag in UserFlags if self._has_flag(public_flag.value)]
@@ -443,25 +448,25 @@ class Intents(BaseFlags):
             setattr(self, key, value)
 
     @classmethod
-    def all(cls):
+    def all(cls) -> 'Intents':
         """A factory method that creates a :class:`Intents` with everything enabled."""
         bits = max(cls.VALID_FLAGS.values()).bit_length()
-        value = (1 << bits) - 1
+        value = ((1 << bits) - 1) & ~(1 << 17 | 1 << 18 | 1 << 19)
         self = cls.__new__(cls)
         self.value = value
         return self
 
     @classmethod
-    def none(cls):
+    def none(cls) -> 'Intents':
         """A factory method that creates a :class:`Intents` with everything disabled."""
         self = cls.__new__(cls)
         self.value = self.DEFAULT_VALUE
         return self
 
     @classmethod
-    def default(cls):
+    def default(cls) -> 'Intents':
         """A factory method that creates a :class:`Intents` with everything enabled
-        except :attr:`presences` and :attr:`members`.
+        except :attr:`presences`, :attr:`members` and :attr:`message_content` (privileged intents).
         """
         self = cls.all()
         self.presences = False
@@ -858,6 +863,44 @@ class Intents(BaseFlags):
         """
         return  1 << 15
 
+    @flag_value
+    def scheduled_events(self):
+        """:class:`bool`: Whether to receive events related to creating, updating and deleting scheduled events.
+        Also, whether to receive events when a user is added or removed (interested).
+
+        This corresponds to the following events:
+
+        - :func:`on_scheduled_event_create`
+        - :func:`on_scheduled_event_update`
+        - :func:`on_scheduled_event_delete`
+        - :func:`on_scheduled_event_user_add`
+        - :func:`on_scheduled_event_user_remove`
+        """
+        return 1 << 16
+
+    @flag_value
+    def auto_moderation_configurations(self):
+        """:class:`bool`: Whether to receive events related to creating, updating and deleting auto moderation rules.
+
+        This corresponds to the following events:
+
+        - :func:`on_auto_moderation_rule_create`
+        - :func:`on_auto_moderation_rule_update`
+        - :func:`on_auto_moderation_rule_delete`
+        """
+        return 1 << 20
+
+    @flag_value
+    def auto_moderation_actions(self):
+        """:class:`bool`: Whether to receive events when auto moderation actions are taken.
+
+        This corresponds to the following event:
+
+        - :func:`on_auto_moderation_action`
+        """
+        return 1 << 21
+
+
 @fill_with_flags()
 class MemberCacheFlags(BaseFlags):
     """Controls the library's cache policy when it comes to members.
@@ -912,7 +955,7 @@ class MemberCacheFlags(BaseFlags):
             setattr(self, key, value)
 
     @classmethod
-    def all(cls):
+    def all(cls) -> 'MemberCacheFlags':
         """A factory method that creates a :class:`MemberCacheFlags` with everything enabled."""
         bits = max(cls.VALID_FLAGS.values()).bit_length()
         value = (1 << bits) - 1
@@ -921,7 +964,7 @@ class MemberCacheFlags(BaseFlags):
         return self
 
     @classmethod
-    def none(cls):
+    def none(cls) -> 'MemberCacheFlags':
         """A factory method that creates a :class:`MemberCacheFlags` with everything disabled."""
         self = cls.__new__(cls)
         self.value = self.DEFAULT_VALUE

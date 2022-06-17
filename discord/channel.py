@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 import datetime
 import time
 import asyncio
-from typing import Union, Optional, Callable, TYPE_CHECKING
+from typing import Union, Optional, Callable, TYPE_CHECKING, Any
 
 import discord
 from .object import Object
@@ -41,6 +41,8 @@ from .errors import ClientException, NoMoreItems, InvalidArgument, ThreadIsArchi
 if TYPE_CHECKING:
     from .state import ConnectionState
     from .member import Member
+    from .guild import Guild
+
 
 __all__ = (
     'TextChannel',
@@ -743,8 +745,12 @@ class ThreadChannel(abc.Messageable, Hashable):
     @property
     def created_at(self) -> Optional[datetime.datetime]:
         """An aware timestamp of when the thread was created in UTC.
+
         .. note::
+
             This timestamp only exists for threads created after 9 January 2022, otherwise returns ``None``.
+
+        :return: Optional[:class:`datetime.datetime`]
         """
         return datetime.datetime.fromisoformat(self._thread_meta.get('create_timestamp'))
 
@@ -945,7 +951,7 @@ class ThreadChannel(abc.Messageable, Hashable):
         :class:`~discord.Invite`
             The invite that was created.
         """
-
+        from .invite import Invite
         data = await self._state.http.create_invite(self.id, reason=reason, **fields)
         return Invite.from_incomplete(data=data, state=self._state)
 
@@ -1908,7 +1914,6 @@ class PartialMessageable(abc.Messageable, Hashable):
     only a channel ID are present.
     The only way to construct this class is through :meth:`Client.get_partial_messageable`.
     Note that this class is trimmed down and has no rich attributes.
-    .. versionadded:: 2.0
     .. container:: operations
         .. describe:: x == y
             Checks if two partial messageables are equal.
@@ -1924,23 +1929,65 @@ class PartialMessageable(abc.Messageable, Hashable):
         The channel type associated with this partial messageable, if given.
     """
 
-    def __init__(self, state: 'ConnectionState', id: int, type: Optional[ChannelType] = None):
+    def __init__(self, state: 'ConnectionState', id: int, type: Optional[ChannelType] = None, *, guild_id: int = None):
         self._state: 'ConnectionState' = state
-        self._channel: Object = Object(id=id)
         self.id: int = id
+        self.guild_id: Optional[int] = guild_id
         self.type: Optional[ChannelType] = type
+    
+    def __repr__(self) -> str:
+        return f'<PartialMessageable id={self.id} type={self.type!r}{f" guild_id={self.guild_id}" if self.guild_id else ""}>'
 
-    async def _get_channel(self) -> Object:
-        return self._channel
+    async def _get_channel(self) -> 'PartialMessageable':
+        return self
 
-    def get_partial_message(self, message_id: int):
+    @property
+    def guild(self) -> Optional['Guild']:
+        """Optional[:class:`~discord.Guild`]: The guild this partial messageable belongs to if any."""
+        return self._state._get_guild(self.guild_id)
+
+    @property
+    def jump_url(self) -> str:
+        """:class:`str`: Returns an url that allows the client to jump to the partial messageable (channel)"""
+        if self.guild_id:
+            return f'https://discord.com/channels/{self.guild_id}/{self.id}'
+        return f'https://discord.com/channels/@me/{self.id}'
+
+    @property
+    def created_at(self) -> datetime.datetime:
+        """:class:`datetime.datetime`: Returns the channel's creation time in UTC."""
+        return utils.snowflake_time(self.id)
+
+    def permissions_for(self, obj: Any = None) -> Permissions:
+        """Handles permission resolution for a :class:`User`.
+        This function is there for compatibility with other channel types.
+        Since partial messageables cannot reasonably have the concept of
+        permissions, this will always return :meth:`Permissions.none`.
+
+        Parameters
+        -----------
+        obj: :class:`User`
+            The user to check permissions for. This parameter is ignored
+            but kept for compatibility with other ``permissions_for`` methods.
+
+        Returns
+        --------
+        :class:`Permissions`
+            The resolved permissions.
+        """
+
+        return Permissions.none()
+
+    def get_partial_message(self, message_id: int) -> 'PartialMessageable':
         """Creates a :class:`PartialMessage` from the message ID.
         This is useful if you want to work with a message and only have its ID without
         doing an unnecessary API call.
+
         Parameters
         ------------
         message_id: :class:`int`
             The message ID to create a partial message for.
+
         Returns
         ---------
         :class:`PartialMessage`

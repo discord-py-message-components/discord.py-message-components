@@ -98,9 +98,6 @@ class Guild(Hashable):
         The guild name.
     emojis: Tuple[:class:`Emoji`, ...]
         All emojis that the guild owns.
-    region: :class:`VoiceRegion`
-        The region the guild belongs on. There is a chance that the region
-        will be a :class:`str` if the value is not recognised by the enumerator.
     afk_timeout: :class:`int`
         The timeout to get sent to the AFK channel.
     afk_channel: Optional[:class:`VoiceChannel`]
@@ -113,7 +110,7 @@ class Guild(Hashable):
         The guild owner's ID. Use :attr:`Guild.owner` instead.
     unavailable: :class:`bool`
         Indicates if the guild is unavailable. If this is ``True`` then the
-        reliability of other attributes outside of :attr:`Guild.id` is slim and they might
+        reliability of other attributes outside of :attr:`Guild.id` is slim, and they might
         all be ``None``. It is best to not do anything with the guild if it is unavailable.
 
         Check the :func:`on_guild_unavailable` and :func:`on_guild_available` events.
@@ -134,7 +131,7 @@ class Guild(Hashable):
     description: Optional[:class:`str`]
         The guild's description.
     mfa_level: :class:`int`
-        Indicates the guild's two factor authorisation level. If this value is 0 then
+        Indicates the guild's two-factor authorisation level. If this value is 0 then
         the guild does not require 2FA for their administrative members. If the value is
         1 then they do.
     verification_level: :class:`VerificationLevel`
@@ -152,10 +149,10 @@ class Guild(Hashable):
         - ``VERIFIED``: Guild is a verified server.
         - ``PARTNERED``: Guild is a partnered server.
         - ``MORE_EMOJI``: Guild is allowed to have more than 50 custom emoji.
+        - ``MORE_STICKER``: Guild is allowed to have more than 60 custom sticker.
         - ``DISCOVERABLE``: Guild shows up in Server Discovery.
         - ``FEATURABLE``: Guild is able to be featured in Server Discovery.
         - ``COMMUNITY``: Guild is a community server.
-        - ``COMMERCE``: Guild can sell things using store channels.
         - ``PUBLIC``: Guild is a public guild.
         - ``NEWS``: Guild can create news channels.
         - ``BANNER``: Guild can upload and use a banner (i.e. :meth:`banner_url`).
@@ -401,7 +398,7 @@ class Guild(Hashable):
         return list(self._application_commands.values())
 
     def get_application_command(self, id):
-        """Optional[:class:`~discord.ApplicationCommand`]: Returns an application-command with the given id"""
+        """Optional[:class:`~discord.ApplicationCommand`]: Returns an application-command from this application that are registered only in this guild with the given id"""
         return self._application_commands.get(id, None)
 
     @property
@@ -426,7 +423,7 @@ class Guild(Hashable):
         Returns
         -------
         Optional[:class:`~discord.GuildScheduledEvent`]
-            The scheduled event or ``None`` if not found-
+            The scheduled event or ``None`` if not found.
         """
         return self._events.get(id)
 

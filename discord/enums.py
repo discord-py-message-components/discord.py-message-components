@@ -777,6 +777,7 @@ class AuditLogAction(Enum):
     auto_moderation_rule_create             = 140
     auto_moderation_rule_update             = 141
     auto_moderation_rule_delete             = 142
+    auto_moderation_block_message           = 143
 
     @property
     def category(self):
@@ -832,6 +833,7 @@ class AuditLogAction(Enum):
             AuditLogAction.auto_moderation_rule_create: AuditLogActionCategory.create,
             AuditLogAction.auto_moderation_rule_update: AuditLogActionCategory.update,
             AuditLogAction.auto_moderation_rule_delete: AuditLogActionCategory.delete,
+            AuditLogAction.auto_moderation_block_message: None
         }
         return lookup[self]
 
@@ -869,7 +871,9 @@ class AuditLogAction(Enum):
         elif v == 121:
             return 'application_command'
         elif v < 143:
-            return "auto_moderation_rule"
+            return 'auto_moderation_rule'
+        elif v < 144:
+            return 'auto_moderation_action'
 
 
 class UserFlags(Enum):
@@ -891,6 +895,7 @@ class UserFlags(Enum):
     verified_bot_developer = 131072
     certified_moderator = 262144
     bot_http_interactions = 524288
+    spammer = 1048576
 
 
 class ActivityType(Enum):
