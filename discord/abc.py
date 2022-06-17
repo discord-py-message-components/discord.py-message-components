@@ -1193,10 +1193,10 @@ class Messageable(metaclass=abc.ABCMeta):
             if not isinstance(data, dict) and hidden is not None:
                 # Thanks Discord that they don't return the message when we send the interaction callback
                 data = await state.http.get_original_interaction_response(application_id=application_id, interaction_token=interaction_token)
-            ret = state.create_message(channel=channel, data=data)
-            if (delete_after is not None) and (hidden is not True):
-                await ret.delete(delay=delete_after)
-            return ret
+        ret = state.create_message(channel=channel, data=data)
+        if (delete_after is not None) and (not is_interaction_response or hidden is not True):
+            await ret.delete(delay=delete_after)
+        return ret
 
     async def trigger_typing(self):
         """|coro|
