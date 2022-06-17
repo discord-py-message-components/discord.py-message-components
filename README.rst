@@ -3,7 +3,7 @@
 |flag_ua| Welcome to discord.py-message-components'! |flag_ua|
 ==============================================================
 
-.. figure:: https://cdn.discordapp.com/attachments/852872100073963532/854711446767796286/discord.py-message-components.png
+.. figure:: ./images/banner_white.png
    :name: discord.py-message-components
    :align: center
    :alt: Name of the Project (discord.py-message-components)
